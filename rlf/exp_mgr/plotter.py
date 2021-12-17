@@ -43,31 +43,15 @@ def smooth_data(df, smooth_vals, value, gp_keys=['method', 'run']):
     return data
 
 
-def make_steps_match(plot_df, group_key, x_name):
-    all_dfs = []
-    for method_name, method_df in plot_df.groupby([group_key]):
-        grouped_runs = method_df.groupby(['run'])
-        max_len = -1
-        max_step_idxs = None
-        for run_name, run_df in grouped_runs:
-            if len(run_df) > max_len:
-                max_len = len(run_df)
-                max_step_idxs = run_df[x_name]
-        for run_name, run_df in grouped_runs:
-            run_df[x_name] = max_step_idxs[:len(run_df)]
-            all_dfs.append(run_df)
-    return pd.concat(all_dfs)
-
-
 def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
                 y_bounds=None, y_disp_bounds=None, x_disp_bounds=None,
                 group_colors=None, xtick_fn=None, ytick_fn=None, legend=False,
                rename_map={}, title=None, axes_font_size=14, title_font_size=18,
                legend_font_size='x-large', method_idxs={}, num_marker_points={},
-               line_styles={}, tight=False, nlegend_cols=1, fetch_std=False):
+               line_styles={}, tight=False):
     """
-    - num_marker_points dict: Key maps method name to the number of markers drawn on the line, NOT the
-      number of points that are plotted! By default this is 8.
+    - num_marker_points: int, The number of markers drawn on the line, NOT the
+      number of points that are plotted!
     """
     plot_df = plot_df.copy()
     if tight:
@@ -77,42 +61,22 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         colors = sns.color_palette()
         group_colors = {method: color for method, color in zip(methods, colors)}
 
+    # Smooth each method and run independently
+    #plot_df = smooth_data(plot_df, smooth_factor, y_name, [group_key, avg_key])
+
     avg_y_df = plot_df.groupby([group_key, x_name]).mean()
     std_y_df = plot_df.groupby([group_key, x_name]).std()
-    method_runs = plot_df.groupby('method')['run'].unique()
-    if fetch_std:
-        y_std = y_name+'_std'
-        new_df = []
-        for k, sub_df in plot_df.groupby([group_key]):
-            where_matches = avg_y_df.index.get_level_values(0) == k
-
-            use_df = avg_y_df[where_matches]
-            if np.isnan(sub_df.iloc[0][y_std]):
-                use_df['std'] = std_y_df[where_matches][y_name]
-            else:
-                use_df['std'] = avg_y_df[where_matches][y_std]
-            new_df.append(use_df)
-        avg_y_df = pd.concat(new_df)
-    else:
-        avg_y_df['std'] = std_y_df[y_name]
+    avg_y_df['std'] = std_y_df[y_name]
 
     lines = []
-    names = []
     for name, sub_df in avg_y_df.groupby(level=0):
-        print(f"{name}: n_seeds: {len(method_runs[name])} (from WB run IDs {list(method_runs[name])})")
-        names.append(name)
         #sub_df = smooth_data(sub_df, smooth_factor, y_name, [group_key, avg_key])
         x_vals = sub_df.index.get_level_values(x_name).to_numpy()
         y_vals = sub_df[y_name].to_numpy()
         y_std = sub_df['std'].fillna(0).to_numpy()
-        if isinstance(smooth_factor, dict):
-            use_smooth_factor = (smooth_factor[name]
-                    if name in smooth_factor else smooth_factor['default'])
-        else:
-            use_smooth_factor = smooth_factor
-        if use_smooth_factor != 0.0:
-            y_vals = np.array(smooth_arr(y_vals, use_smooth_factor))
-            y_std = np.array(smooth_arr(y_std, use_smooth_factor))
+
+        y_vals = np.array(smooth_arr(y_vals, smooth_factor))
+        y_std = np.array(smooth_arr(y_std, smooth_factor))
 
         add_kwargs = {}
         if name in line_styles:
@@ -150,10 +114,8 @@ def uncert_plot(plot_df, ax, x_name, y_name, avg_key, group_key, smooth_factor,
         plt.yticks(ax.get_yticks(), [ytick_fn(t) for t in ax.get_yticks()])
 
     if legend:
-        labs = [(i, l[0].get_label()) for i, l in enumerate(lines)]
-        labs = sorted(labs, key=lambda x: method_idxs[names[x[0]]])
-        plt.legend([lines[i] for i, _ in labs], [x[1] for x in labs],
-                fontsize=legend_font_size, ncol=nlegend_cols)
+        labs = [l[0].get_label() for l in lines]
+        plt.legend(lines, labs, fontsize=legend_font_size)
 
     ax.grid(b=True, which='major', color='lightgray', linestyle='--')
 

@@ -14,6 +14,7 @@ import numpy as np
 from rlf.rl.model import ConcatLayer
 from rlf.rl.model import InjectNet
 from functools import partial
+from rlf.rl.loggers import sanity_checker
 from rlf.exp_mgr.viz_utils import append_text_to_image
 
 

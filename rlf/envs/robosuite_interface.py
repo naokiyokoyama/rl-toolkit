@@ -30,7 +30,7 @@ class RoboSuiteControlInterface(EnvInterface):
         if self.args.rs_demo_wrapper:
             env = DemoSamplerWrapper(
                     env,
-                    demo_path=self.args.demo_path,
+                    demo_path="/home/aszot/RoboTurkPilot/bins-Can/",
                     need_xml=True,
                     num_traj=-1,
                     sampling_schemes=["uniform", "random"],
@@ -49,7 +49,6 @@ class RoboSuiteControlInterface(EnvInterface):
 
     def get_add_args(self, parser):
         parser.add_argument('--rs-reward-shaping', type=str2bool, default=True)
-        parser.add_argument('--rs-demo-path')
         parser.add_argument('--rs-demo-wrapper', action='store_true',
                 default=False)
 

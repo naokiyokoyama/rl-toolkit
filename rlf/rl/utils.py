@@ -24,13 +24,6 @@ try:
 except:
     pass
 
-
-def print_weights(m):
-    for name, param in m.named_parameters():
-        print(name)
-        print(param)
-
-
 def get_env_attr(env, attr_name, max_calls=10):
     try:
         return getattr(env, attr_name)
@@ -46,14 +39,14 @@ def get_env_attr(env, attr_name, max_calls=10):
 
 
 
-def plot_line(plot_vals, save_name, save_dir, to_wb, update_iter=None, x_vals=None,
+def plot_line(plot_vals, save_name, args, to_wb, update_iter=None, x_vals=None,
         x_name=None, y_name=None, title=None):
     """
     Plot a simple rough line.
     """
     if x_vals is None:
         x_vals = np.arange(len(plot_vals))
-    save_path = osp.join(save_dir, save_name+'.png')
+    save_path = osp.join(args.save_dir, args.env_name, args.prefix, save_name)
     if title is None:
         plt.title(save_name)
     else:
@@ -72,9 +65,9 @@ def plot_line(plot_vals, save_name, save_dir, to_wb, update_iter=None, x_vals=No
     if update_iter is not None:
         kwargs['step'] = update_iter
 
-    if to_wb:
+    if to_wb and not args.ray:
         wandb.log({save_name:
-            [wandb.Image(save_path)]}, **kwargs)
+            [wandb.Image(Image.open(save_path))]}, **kwargs)
 
 def plt_save(*path_parts):
     save_name = osp.join(*path_parts)
@@ -121,20 +114,6 @@ def deep_dict_select(d, idx):
     for k in d:
         ret_dict[k] = d[k][idx]
     return ret_dict
-
-def transpose_arr_dict(arr):
-    keys = arr[0].keys()
-    orig_format = arr[0][list(keys)[0]]
-    ret_d = {k: [] for k in keys}
-    for arr_ele in arr:
-        for k in keys:
-            ret_d[k].append(arr_ele[k])
-
-    if isinstance(orig_format, torch.Tensor):
-        for k in keys:
-            ret_d[k] = torch.stack(ret_d[k])
-
-    return ret_d
 
 def flatten_obs_dict(ob_shape, keep_keys):
     total_dim = 0
@@ -441,9 +420,9 @@ class CacheHelper:
                     if self.verbose:
                         print('Loading cache @', self.cache_id)
                     return pickle.load(f)
-            except EOFError as e:
+            except:
                 if load_depth == 32:
-                    raise e
+                    raise RuntimeError()
                 # try again soon
                 print("Cache size is ", osp.getsize(self.cache_id), 'for ', self.cache_id)
                 time.sleep(1.0 + np.random.uniform(0.0, 1.0))
