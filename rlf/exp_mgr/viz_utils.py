@@ -32,7 +32,8 @@ def append_text_to_image(image, lines):
             font_thickness,
             lineType=cv2.LINE_AA,
         )
-    final = image + blank_image
+    final = np.clip(image.astype(np.float32) + blank_image.astype(np.float32), 0, 255)
+    final = final.astype(np.uint8)
     return final
 
 
