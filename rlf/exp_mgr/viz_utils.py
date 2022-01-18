@@ -11,30 +11,28 @@ def append_text_to_image(image, lines):
     Returns:
         image: (np.array): The modified image with the text appended.
     """
-    h, w, c = image.shape
     font_size = 0.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
-    blank_image = np.zeros(image.shape, dtype=np.uint8)
 
     y = 0
+    image_copy = image.copy()
     for line in lines:
         textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
         y += textsize[1] + 10
         x = 10
-        cv2.putText(
-            blank_image,
-            line,
-            (x, y),
-            font,
-            font_size,
-            (255, 255, 255),
-            font_thickness,
-            lineType=cv2.LINE_AA,
-        )
-    final = np.clip(image.astype(np.float32) + blank_image.astype(np.float32), 0, 255)
-    final = final.astype(np.uint8)
-    return final
+        for font_thickness, color in [(4, (0, 0, 0)), (1, (255, 255, 255))]:
+            cv2.putText(
+                image_copy,
+                line,
+                (x, y),
+                font,
+                font_size,
+                color,
+                font_thickness,
+                lineType=cv2.LINE_AA,
+            )
+    return image_copy
 
 
 def save_agent_obs(frames, imdim, vid_dir, name):
